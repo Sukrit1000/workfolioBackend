@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import dns from "node:dns";
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -10,6 +12,7 @@ import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 dotenv.config();
 
+// console.log("Mongo URI servers:", dns.getServers()); // Debug log
 const app = express();
 
 // connect database
