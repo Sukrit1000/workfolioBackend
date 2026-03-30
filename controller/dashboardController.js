@@ -174,3 +174,108 @@ export const getFullTimeline = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getGrowthInsights = async (req, res, next) => {
+  console.log("Growth Insights API hit>> ", req.query.projects, req.query.tech);
+
+  try {
+    const userId = req.user.id;
+
+    // 🔥 GET FROM QUERY PARAMS (THIS WAS MISSING)
+    const addProjects = Number(req.query.projects) || 0;
+    const addTech = Number(req.query.tech) || 0;
+
+   
+
+    const projects = await Project.find({ userId });
+    const orgs = await Organizations.find({ userId });
+
+    // -------------------------
+    // CURRENT METRICS
+    // -------------------------
+
+    const totalProjects = projects.length;
+
+    let totalPromotions = 0;
+    orgs.forEach((org) => {
+      totalPromotions += org.promotions?.length || 0;
+    });
+
+    // Tech diversity
+    const techSet = new Set();
+    projects.forEach((p) => {
+      if (p.techUsed) {
+        p.techUsed.split(",").forEach((t) => {
+          techSet.add(t.trim().toLowerCase());
+        });
+      }
+    });
+
+    const techCount = techSet.size;
+
+    // -------------------------
+    // CURRENT SCORE
+    // -------------------------
+
+    const growthScore =
+      totalProjects * 2 +
+      totalPromotions * 5 +
+      techCount * 3;
+
+    // -------------------------
+    // FUTURE SIMULATION (DYNAMIC)
+    // -------------------------
+
+    const futureProjects = totalProjects + addProjects;
+    const futureTech = techCount + addTech;
+
+    const futureScore_projectsOnly =
+      futureProjects * 2 +
+      totalPromotions * 5 +
+      techCount * 3;
+
+    const futureScore_techOnly =
+      totalProjects * 2 +
+      totalPromotions * 5 +
+      futureTech * 3;
+
+    const futureScore_combined =
+      futureProjects * 2 +
+      totalPromotions * 5 +
+      futureTech * 3;
+
+    // 🔥 Optional: calculate improvement %
+    const improvement = Math.round(
+      ((futureScore_combined - growthScore) / growthScore) * 100
+    );
+
+    // -------------------------
+    // RESPONSE
+    // -------------------------
+    
+
+    res.status(200).json({
+      status: true,
+      code: 0,
+      data: {
+        current: {
+          score: growthScore,
+          projects: totalProjects,
+          promotions: totalPromotions,
+          techCount,
+        },
+        future: {
+          addedProjects: addProjects,
+          addedTech: addTech,
+          projectsOnly: futureScore_projectsOnly,
+          techOnly: futureScore_techOnly,
+          combined: futureScore_combined,
+          improvementPercent: improvement,
+        },
+      },
+    });
+  } catch (err) {
+    console.log("Error in getGrowthInsights:", err);
+    next(err);
+  }
+};
